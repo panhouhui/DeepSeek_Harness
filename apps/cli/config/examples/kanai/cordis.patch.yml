@@ -1,0 +1,47 @@
+- id: llm-deepseek
+  config:
+    protocol: chat-completions
+    apiKeyEnv: KANAI_API_KEY
+    baseURL: https://api.kanai.world:6860/v1
+    reasoningEffort: !!js process.env.KANAI_REASONING_EFFORT ?? 'off'
+    maxTokens: !!js Number(process.env.KANAI_MAX_TOKENS ?? 65536)
+    defaultContextWindow: 1048576
+    streamIdleTimeoutMs: 3600000
+    models:
+      - id: deepseek-v4.1-flash
+        name: DeepSeek-V4.1-Flash (Kanai)
+        contextWindow: 1048576
+        inputModalities: [text]
+
+- id: agent-default-model
+  config:
+    provider: deepseek-official
+    model: deepseek-v4.1-flash
+
+- insert:
+    - id: kanai-request-fields
+      name: ./request-fields.mjs
+      config:
+        model: deepseek-v4.1-flash
+        webSearch: !!js process.env.KANAI_WEB_SEARCH ?? 'auto'
+        priority: 0
+        normalEffort: 20
+        maxEffort: 100
+
+- id: session-log-deepseek
+  disabled: true
+
+- id: plugin-package-inventory-deepseek
+  disabled: true
+
+- id: web-search-deepseek
+  disabled: true
+
+- id: web
+  config:
+    fetchProvider: http
+
+- id: tool-web
+  config:
+    search: false
+    fetch: true

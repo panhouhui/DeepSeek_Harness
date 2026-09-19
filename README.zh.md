@@ -8,6 +8,8 @@ DeepSeek Harness（`dsh`）是由 [DeepSeek AI](https://deepseek.com) 开发的�
 
 文档：[https://deepseek-harness.github.io/deepseek-harness/](https://deepseek-harness.github.io/deepseek-harness/)
 
+**本地 DeepSeek-V4.1-Flash 模型（Windows）：** 本仓库包含 Kanai 网关配置和 `start-kanai.ps1` 启动器。[本地模型配置说明](apps/cli/config/examples/kanai/README.zh.md#setup)列出了 API Key 的保存位置、CA 证书和启动命令。
+
 ## 开发者预览
 
 DeepSeek Harness 处于 _开发者预览_ 阶段，正在快速迭代。**未来将出现破坏兼容性的变更。**

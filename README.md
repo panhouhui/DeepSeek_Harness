@@ -8,6 +8,8 @@ It is built on an **everything-is-a-plugin** architecture and powered by [Cordis
 
 Documentation: [https://deepseek-harness.github.io/deepseek-harness/](https://deepseek-harness.github.io/deepseek-harness/)
 
+**Local DeepSeek-V4.1-Flash model (Windows):** this checkout includes a Kanai gateway configuration and `start-kanai.ps1`. Follow the [local model setup guide](apps/cli/config/examples/kanai/README.md#setup) for the API Key file location, CA certificate, and startup commands.
+
 ## Developer preview
 
 DeepSeek Harness is in _developer preview_ and iterating rapidly. **THERE WILL BE COMPATIBILITY-BREAKING CHANGES.**
