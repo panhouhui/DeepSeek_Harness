@@ -7,12 +7,13 @@ description: "在 Windows 上配置 API Key，并通过 Kanai 网关启动 DeepS
 
 ## 概述
 
-此配置将现有 Web 和 headless 配置接到 `https://api.kanai.world:6860/v1`，使用模型 `deepseek-v4.1-flash`。Harness 在你的电脑上运行，通过此网关调用模型服务器；仓库不包含模型权重。以下命令均在仓库根目录的 PowerShell 7（`pwsh`）中运行。
+此配置将现有 Web 和 headless 配置接到 `https://api.kanai.world:6860/v1`，使用模型 `deepseek-v4.1-flash`。Harness 在你的电脑上运行，通过此网关调用模型服务器；仓库不包含模型权重。以下命令均在仓库根目录运行。启动器支持系统自带的 Windows PowerShell 5.1（`powershell.exe`）；PowerShell 7 为可选项。
 
 ## 目录
 
 - [首次配置与 API Key](#setup)
 - [启动](#start)
+- [后台自启动](#autostart)
 - [配置](#configuration)
 - [验证](#verification)
 
@@ -50,7 +51,7 @@ C:\Users\pc\.dsh-kanai\
 启动网页界面，再打开终端打印的带认证信息的地址：
 
 ```powershell
-pwsh -NoProfile -File .\start-kanai.ps1 -NoOpen
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\start-kanai.ps1 -NoOpen
 ```
 
 默认地址为 `http://127.0.0.1:3000`；首次打开的浏览器需要使用终端打印的 token 地址。`-Port` 可指定其他端口。省略 `-NoOpen` 会让 Harness 打开浏览器。前台运行时按 Ctrl+C 停止服务。
@@ -58,10 +59,46 @@ pwsh -NoProfile -File .\start-kanai.ps1 -NoOpen
 执行一次任务后退出：
 
 ```powershell
-pwsh -NoProfile -File .\start-kanai.ps1 -Profile headless -WebSearch off -MaxTokens 256 -Prompt 'Reply with exactly FINAL_CONNECTION_OK. Do not use tools.'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\start-kanai.ps1 -Profile headless -WebSearch off -MaxTokens 256 -Prompt "Reply with exactly FINAL_CONNECTION_OK. Do not use tools."
 ```
 
 默认 `-Mode fast` 关闭思考。`normal` 和 `thinking` 请求强度 20；`max` 请求强度 100，并默认使用 262,144 输出 token。其他模式默认 65,536。显式 `-MaxTokens` 会覆盖输出上限。`-WebSearch off|auto|force` 控制网关联网字段，默认 `auto`。这些参数控制请求；服务器决定某次回答是否需要思考或联网。
+
+<a id="autostart"></a>
+## 后台自启动
+
+确认前台启动正常后，按 Ctrl+C 停止服务。使用保存模型配置的同一个 Windows 账户，以管理员身份打开 CMD，进入本仓库目录，然后运行：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-autostart.ps1
+```
+
+安装器自动识别项目目录、当前用户和 Node 程序。按提示输入该用户的 Windows 账户密码，不能使用 Windows Hello PIN 或模型 API Key 代替。账户凭据由 Windows 任务计划程序保存，脚本不会将密码写入文件。任务以该用户的普通权限运行，在开机 30 秒后启动，尚未登录也可运行；安装后也会立即请求后台启动。任务不会打开终端窗口或浏览器。请保留安装时的项目路径；移动项目、更换 Windows 密码或 Node 安装位置后，先停止任务，再重新安装。
+
+如果账户只使用 PIN，可安装无需密码、在该用户登录后启动的任务：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-autostart.ps1 -AtLogon
+```
+
+`-AtLogon` 不会在登录前启动，注销后也会停止。如果 Windows 拒绝注册任务，请使用同一账户的管理员 CMD。两种模式都读取 `%USERPROFILE%\.dsh-kanai\.env` 及旁边的 CA 证书。用户 `liang` 对应的目录是 `C:\Users\liang\.dsh-kanai`。安装器会拒绝已被占用的端口；请停止原有服务，或安装时加上 `-Port 3001`。重新安装正在运行的任务前，必须先停止它。
+
+先查看任务状态，待服务就绪后再打开带认证的页面：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-autostart.ps1 -Action Status
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-autostart.ps1 -Action Open
+```
+
+每次启动会覆盖 `%USERPROFILE%\.dsh-kanai\autostart\web.stdout.log` 和 `web.stderr.log`。`Running` 表示任务进程运行中，不代表模型已就绪；`Open` 会先检查日志中的网页地址，再打开浏览器。标准输出日志含本地网页认证令牌，请妥善保管。地址尚未就绪时，检查日志后重试。安装任务和打开网页都不验证模型 API Key，需发送一条消息确认模型访问。保存密码的开机任务注册及真正重启后的启动效果，需要部署者验证；本地验证覆盖任务定义和实际登录任务的启动、停止流程。
+
+停止或移除任务前，请先结束正在执行的工作。以下停止和移除命令会终止后台服务；移除任务会保留密钥、证书、日志和会话：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-autostart.ps1 -Action Stop
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-autostart.ps1 -Action Start
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-autostart.ps1 -Action Remove
+```
 
 <a id="configuration"></a>
 ## 配置

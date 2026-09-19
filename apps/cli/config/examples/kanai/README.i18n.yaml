@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write apps/cli/config/examples/kanai/README.md
-README.md: b02fd2b43328c657df6cdbfe73334514bfd37680
-README.zh.md: 36289bad69c04c637686e55293396b64b181d1e3
+README.md: 5deb90fa4bf3cc242997c9b66e185d6baea88347
+README.zh.md: 619dc838e9fb12544f644e98cb0cfa1a47d70555

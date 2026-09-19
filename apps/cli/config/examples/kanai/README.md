@@ -7,12 +7,13 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-This configuration connects the shipped Web and headless profiles to `https://api.kanai.world:6860/v1`, using model `deepseek-v4.1-flash`. Harness runs on your computer and calls the model server through this gateway; the repository does not contain model weights. Run the commands below from the repository root in PowerShell 7 (`pwsh`).
+This configuration connects the shipped Web and headless profiles to `https://api.kanai.world:6860/v1`, using model `deepseek-v4.1-flash`. Harness runs on your computer and calls the model server through this gateway; the repository does not contain model weights. Run the commands below from the repository root. The launchers support the built-in Windows PowerShell 5.1 (`powershell.exe`); PowerShell 7 is optional.
 
 ## Contents
 
 - [First-time setup and API Key](#setup)
 - [Start](#start)
+- [Background autostart](#autostart)
 - [Configuration](#configuration)
 - [Verification](#verification)
 
@@ -50,7 +51,7 @@ Obtain the key and CA certificate from the model service administrator when conf
 Start the browser interface and open the authenticated URL printed in the terminal:
 
 ```powershell
-pwsh -NoProfile -File .\start-kanai.ps1 -NoOpen
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\start-kanai.ps1 -NoOpen
 ```
 
 The default address is `http://127.0.0.1:3000`; a fresh browser needs the printed token URL. `-Port` selects another port. Omitting `-NoOpen` lets Harness open the browser. Stop the foreground server with Ctrl+C.
@@ -58,10 +59,46 @@ The default address is `http://127.0.0.1:3000`; a fresh browser needs the printe
 Run one task and exit:
 
 ```powershell
-pwsh -NoProfile -File .\start-kanai.ps1 -Profile headless -WebSearch off -MaxTokens 256 -Prompt 'Reply with exactly FINAL_CONNECTION_OK. Do not use tools.'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\start-kanai.ps1 -Profile headless -WebSearch off -MaxTokens 256 -Prompt "Reply with exactly FINAL_CONNECTION_OK. Do not use tools."
 ```
 
 `-Mode fast` is the default and disables thinking. `normal` and `thinking` request effort 20; `max` requests effort 100 and defaults to 262,144 output tokens. Other modes default to 65,536. An explicit `-MaxTokens` overrides the output cap. `-WebSearch off|auto|force` controls the gateway's search field, defaulting to `auto`. These are request settings; the server decides whether a particular answer needs reasoning or search.
+
+<a id="autostart"></a>
+## Background autostart
+
+After the foreground launch works, stop it with Ctrl+C. Open CMD as administrator under the same Windows account that owns the model configuration, enter this repository directory, and run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-autostart.ps1
+```
+
+The installer detects the repository, current user, and Node executable. Enter that user's Windows account password when prompted; a Windows Hello PIN and the model API Key cannot replace it. Windows Task Scheduler stores the account credential; the script does not write it into files. The task runs under that user with limited privileges, starts 30 seconds after boot even before login, and requests an immediate background start after installation. The task does not open a terminal window or browser. Keep the repository at its installed path; after moving it or changing the Windows password or Node installation, stop the task and reinstall it.
+
+For an account that only uses a PIN, install a password-free task that starts after this user logs in instead:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-autostart.ps1 -AtLogon
+```
+
+`-AtLogon` does not start before login and stops at logout. If Windows denies task registration, use an administrator CMD under the same account. Both modes read `%USERPROFILE%\.dsh-kanai\.env` and the adjacent CA certificate. For user `liang`, that directory is `C:\Users\liang\.dsh-kanai`. Installation refuses an occupied port; stop the existing server or pass `-Port 3001` when installing. Reinstalling a running task requires stopping it first.
+
+Check the task, then open the authenticated page after the server is ready:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-autostart.ps1 -Action Status
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-autostart.ps1 -Action Open
+```
+
+Logs are replaced at each start in `%USERPROFILE%\.dsh-kanai\autostart\web.stdout.log` and `web.stderr.log`. `Running` describes the task process, not model readiness; `Open` checks the logged Web URL before opening it. The stdout log contains a local Web authentication token, so keep it private. If the URL is not ready, inspect the logs and retry. Neither installing the task nor opening the Web UI validates the model API Key; send a message to verify model access. Boot registration with a saved password and startup after a real reboot require validation by the deploying user; local verification covers task definitions and the actual logon-task start/stop path.
+
+Stop active work before stopping or removing the task. These commands terminate the background server; removing the task keeps the key, certificate, logs, and sessions:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-autostart.ps1 -Action Stop
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-autostart.ps1 -Action Start
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-autostart.ps1 -Action Remove
+```
 
 <a id="configuration"></a>
 ## Configuration

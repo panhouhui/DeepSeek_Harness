@@ -1,3 +1,5 @@
+#Requires -Version 5.1
+# LogDirectory keeps the native child inside Task Scheduler's process tree; the task hides the window.
 [CmdletBinding()]
 param(
     [ValidateSet('web', 'headless')]
@@ -12,7 +14,9 @@ param(
     [ValidateRange(1, 65535)]
     [int]$Port = 3000,
     [switch]$NoOpen,
-    [switch]$Json
+    [switch]$Json,
+    [string]$NodePath = 'node',
+    [string]$LogDirectory
 )
 
 $ErrorActionPreference = 'Stop'
@@ -32,6 +36,9 @@ if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'apps/cli/lib/bin.js')
 }
 if ($Profile -eq 'headless' -and [string]::IsNullOrWhiteSpace($Prompt)) {
     throw 'Headless mode requires -Prompt.'
+}
+if ($LogDirectory -and ($Profile -ne 'web' -or -not $NoOpen)) {
+    throw 'LogDirectory requires the web profile and -NoOpen.'
 }
 
 $kanaiEnvironment = @{
@@ -61,8 +68,22 @@ try {
         if ($Json) { $kanaiArgs += '--json' }
         $kanaiArgs += @('--', $Prompt)
     }
-    & node @kanaiArgs
-    $kanaiExitCode = $LASTEXITCODE
+    if ($LogDirectory) {
+        New-Item -ItemType Directory -Path $LogDirectory -Force | Out-Null
+        [pscustomobject]@{
+            ProcessId = $PID
+            StartedTicks = [string](Get-Process -Id $PID).StartTime.ToUniversalTime().Ticks
+            ScriptPath = $PSCommandPath
+        } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $LogDirectory 'runner.json') -Encoding UTF8
+        # Windows PowerShell wraps native stderr as error records; Node's exit code owns failure.
+        $ErrorActionPreference = 'Continue'
+        & $NodePath @kanaiArgs 1> (Join-Path $LogDirectory 'web.stdout.log') 2> (Join-Path $LogDirectory 'web.stderr.log')
+        $kanaiExitCode = $LASTEXITCODE
+        $ErrorActionPreference = 'Stop'
+    } else {
+        & $NodePath @kanaiArgs
+        $kanaiExitCode = $LASTEXITCODE
+    }
 } finally {
     foreach ($key in $previousEnvironment.Keys) {
         [Environment]::SetEnvironmentVariable($key, $previousEnvironment[$key], 'Process')
