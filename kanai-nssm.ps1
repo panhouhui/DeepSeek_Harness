@@ -76,7 +76,8 @@ function Invoke-KanaiNssm {
 
 function ConvertTo-KanaiArgument {
     param([Parameter(Mandatory = $true)][string]$Value)
-    return '"' + ($Value -replace '"', '\\"') + '"'
+    # Windows PowerShell 5.1 removes unescaped quotes from native command arguments.
+    return '\"' + ($Value -replace '"', '\\\"') + '\"'
 }
 
 function Assert-KanaiInstallFiles {
