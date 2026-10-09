@@ -13,7 +13,8 @@ description: "在 Windows 上配置 API Key，并通过 Kanai 网关启动 DeepS
 
 - [首次配置与 API Key](#setup)
 - [启动](#start)
-- [后台自启动](#autostart)
+- [NSSM 后台服务（推荐）](#nssm)
+- [任务计划程序后台自启动](#autostart)
 - [配置](#configuration)
 - [验证](#verification)
 
@@ -64,8 +65,35 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\start-kanai.ps1 -Profi
 
 默认 `-Mode fast` 关闭思考。`normal` 和 `thinking` 请求强度 20；`max` 请求强度 100，并默认使用 262,144 输出 token。其他模式默认 65,536。显式 `-MaxTokens` 会覆盖输出上限。`-WebSearch off|auto|force` 控制网关联网字段，默认 `auto`。这些参数控制请求；服务器决定某次回答是否需要思考或联网。
 
+<a id="nssm"></a>
+## NSSM 后台服务（推荐）
+
+需要在后台运行并随 Windows 启动时，使用 NSSM（Non-Sucking Service Manager）把 `start-kanai.ps1` 注册为 Windows 服务。服务以保存模型配置的同一个 Windows 账户运行，因此 `%USERPROFILE%\.dsh-kanai\.env` 和旁边的 CA 证书仍然有效；不要使用 `LocalSystem`，否则服务会读取错误的用户目录。
+
+从 [NSSM 官方下载页](https://nssm.cc/download) 下载与系统匹配的版本，解压并记住 `nssm.exe` 的完整路径，例如 `C:\Tools\nssm\win64\nssm.exe`。NSSM 不需要复制到仓库，也不要把它的压缩包或可执行文件提交到 Git。
+
+确认前台启动正常后按 Ctrl+C 停止。使用保存模型配置的同一个 Windows 账户，以管理员身份打开 Windows PowerShell 5.1，进入本仓库目录，然后运行：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-nssm.ps1 -Action Install -NssmPath "C:\Tools\nssm\win64\nssm.exe"
+```
+
+安装器会检查 `.env`、CA 证书、构建产物和 Node，提示输入该 Windows 账户的登录密码，并创建名为 `DeepSeek-Harness-Kanai` 的延迟自动启动服务。密码必须是 Windows 账户密码，不能使用 Windows Hello PIN 或模型 API Key；NSSM 需要此密码设置服务登录账户，密码不会写入脚本或仓库。服务不打开终端或浏览器，日志在 `%USERPROFILE%\.dsh-kanai\autostart`，其中 `web.stdout.log` 仍可能包含本地网页认证令牌。
+
+服务安装后会立即请求启动；查看状态和管理服务时继续使用相同的 NSSM 路径：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-nssm.ps1 -Action Status -NssmPath "C:\Tools\nssm\win64\nssm.exe"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-nssm.ps1 -Action Start -NssmPath "C:\Tools\nssm\win64\nssm.exe"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-nssm.ps1 -Action Restart -NssmPath "C:\Tools\nssm\win64\nssm.exe"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-nssm.ps1 -Action Stop -NssmPath "C:\Tools\nssm\win64\nssm.exe"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-nssm.ps1 -Action Remove -NssmPath "C:\Tools\nssm\win64\nssm.exe"
+```
+
+`-Port 3001` 可在安装时选择其他回环端口。重新安装同名服务前先运行 `Stop`；脚本会拒绝修改描述不匹配的同名 Windows 服务。移除服务会保留密钥、证书、日志和会话。服务启动后，读取 `web.stdout.log` 中的地址并在浏览器打开；服务本身不会自动打开浏览器。
+
 <a id="autostart"></a>
-## 后台自启动
+## 任务计划程序后台自启动
 
 确认前台启动正常后，按 Ctrl+C 停止服务。使用保存模型配置的同一个 Windows 账户，以管理员身份打开 CMD，进入本仓库目录，然后运行：
 

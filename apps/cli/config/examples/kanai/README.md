@@ -13,7 +13,8 @@ This configuration connects the shipped Web and headless profiles to `https://ap
 
 - [First-time setup and API Key](#setup)
 - [Start](#start)
-- [Background autostart](#autostart)
+- [NSSM service (recommended)](#nssm)
+- [Task Scheduler background startup](#autostart)
 - [Configuration](#configuration)
 - [Verification](#verification)
 
@@ -64,8 +65,35 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\start-kanai.ps1 -Profi
 
 `-Mode fast` is the default and disables thinking. `normal` and `thinking` request effort 20; `max` requests effort 100 and defaults to 262,144 output tokens. Other modes default to 65,536. An explicit `-MaxTokens` overrides the output cap. `-WebSearch off|auto|force` controls the gateway's search field, defaulting to `auto`. These are request settings; the server decides whether a particular answer needs reasoning or search.
 
+<a id="nssm"></a>
+## NSSM service (recommended)
+
+To run in the background and start with Windows, use NSSM (Non-Sucking Service Manager) to register `start-kanai.ps1` as a Windows service. The service runs under the same Windows account that owns the model configuration, so `%USERPROFILE%\.dsh-kanai\.env` and its adjacent CA certificate remain available; do not use `LocalSystem`, which would select the wrong user directory.
+
+Download a matching NSSM build from the [official NSSM download page](https://nssm.cc/download), extract it, and keep the full path to `nssm.exe`, for example `C:\Tools\nssm\win64\nssm.exe`. NSSM does not need to be copied into the repository; do not commit its archive or executable.
+
+After the foreground launch works, stop it with Ctrl+C. Under the same Windows account that owns the model configuration, open Windows PowerShell 5.1 as administrator, enter the repository directory, and run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-nssm.ps1 -Action Install -NssmPath "C:\Tools\nssm\win64\nssm.exe"
+```
+
+The installer checks the `.env`, CA certificate, build output, and Node, asks for that Windows account's sign-in password, and creates a delayed auto-start service named `DeepSeek-Harness-Kanai`. The password must be the Windows account password; a Windows Hello PIN and the model API Key cannot replace it. NSSM needs this password to set the service logon account; the script and repository do not store it. The service opens neither a terminal nor a browser. Logs are under `%USERPROFILE%\.dsh-kanai\autostart`; `web.stdout.log` may contain the local Web authentication token.
+
+Installation requests an immediate start. Use the same NSSM path for service status and management:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-nssm.ps1 -Action Status -NssmPath "C:\Tools\nssm\win64\nssm.exe"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-nssm.ps1 -Action Start -NssmPath "C:\Tools\nssm\win64\nssm.exe"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-nssm.ps1 -Action Restart -NssmPath "C:\Tools\nssm\win64\nssm.exe"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-nssm.ps1 -Action Stop -NssmPath "C:\Tools\nssm\win64\nssm.exe"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\kanai-nssm.ps1 -Action Remove -NssmPath "C:\Tools\nssm\win64\nssm.exe"
+```
+
+Use `-Port 3001` during installation to select another loopback port. Stop the service before reinstalling it; the script refuses to change an unrelated Windows service with the same name. Removing the service keeps the key, certificate, logs, and sessions. After the service starts, read the address in `web.stdout.log` and open it in a browser; the service does not open a browser automatically.
+
 <a id="autostart"></a>
-## Background autostart
+## Task Scheduler background startup
 
 After the foreground launch works, stop it with Ctrl+C. Open CMD as administrator under the same Windows account that owns the model configuration, enter this repository directory, and run:
 
