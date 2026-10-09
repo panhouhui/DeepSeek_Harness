@@ -159,7 +159,7 @@ switch ($Action) {
                 @('set', $ServiceName, 'AppEnvironmentExtra', "USERPROFILE=$env:USERPROFILE"),
                 @('set', $ServiceName, 'DisplayName', 'DeepSeek Harness Kanai'),
                 @('set', $ServiceName, 'Description', $kanaiMarker),
-                @('set', $ServiceName, 'Start', 'SERVICE_DELAYED_START'),
+                @('set', $ServiceName, 'Start', 'SERVICE_DELAYED_AUTO_START'),
                 @('set', $ServiceName, 'AppNoConsole', '1'),
                 @('set', $ServiceName, 'AppStdout', (Join-Path $kanaiLogs 'nssm.stdout.log')),
                 @('set', $ServiceName, 'AppStderr', (Join-Path $kanaiLogs 'nssm.stderr.log')),
