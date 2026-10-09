@@ -35,6 +35,7 @@ $kanaiLogs = Join-Path $kanaiHome 'autostart'
 $kanaiScript = Join-Path $PSScriptRoot 'start-kanai.ps1'
 $kanaiPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 $kanaiMarker = "DeepSeek Harness Kanai NSSM service; owner=$kanaiOwner"
+$kanaiLegacyMarker = "$kanaiMarker; repository=$PSScriptRoot"
 $kanaiIsAdmin = ([Security.Principal.WindowsPrincipal]$kanaiIdentity).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 function Get-KanaiService {
@@ -44,7 +45,7 @@ function Get-KanaiService {
 function Assert-KanaiServiceOwner {
     param([object]$Service)
     if (-not $Service) { throw "Service '$ServiceName' is not installed. Run -Action Install first." }
-    if ($Service.Description -ne $kanaiMarker) {
+    if ($Service.Description -ne $kanaiMarker -and $Service.Description -ne $kanaiLegacyMarker) {
         throw "Refusing to change an unrelated Windows service: $ServiceName"
     }
 }
